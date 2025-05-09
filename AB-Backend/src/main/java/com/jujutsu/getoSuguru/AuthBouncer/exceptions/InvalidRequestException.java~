@@ -1,0 +1,4 @@
+package com.jujutsu.getoSuguru.AuthBouncer.exceptions;
+
+public class InvalidRequestException {
+}

@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+input:focus, input:focus-visible, input:focus-within {
+  outline: 2px solid var(--dynamic-secondary-color);
+  box-shadow: 0 0 0 2px var(--dynamic-secondary-color);
+}

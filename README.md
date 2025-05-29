@@ -16,21 +16,35 @@
 
 ### 🎯 **Authentication Flow Architecture**
 ```mermaid
-graph LR
-    A[Client] --> B[JWT Filter]
-    B --> C[Security Context]
-    C --> D[Controller Layer]
-    D --> E[Service Layer]
-    E --> F[Repository Layer]
-    F --> G[PostgreSQL]
+graph TB
+    A[Client Request] --> B{Authentication Type}
     
-    E --> H[Redis Cache]
-    E --> I[Email Service]
-    E --> J[OAuth2 Providers]
+    B -->|Local Auth| C[Email/Password]
+    B -->|OAuth2| D[Google/GitHub]
+    B -->|OTP| E[Email OTP]
     
-    style E fill:#ff6b6b
-    style G fill:#4ecdc4
-    style H fill:#45b7d1
+    C --> F[AuthController]
+    D --> G[OAuthController]
+    E --> H[OtpAuthController]
+    
+    F --> I[AuthService]
+    G --> J[GoogleOAuthService/GithubOAuthService]
+    H --> K[OtpService]
+    
+    I --> L[JWT Generation]
+    J --> L
+    K --> L
+    
+    L --> M[Access Token + Refresh Token]
+    M --> N[HttpOnly Cookie + Bearer Token]
+    
+    N --> O[JWTFilter Validation]
+    O --> P[SecurityContext]
+    P --> Q[Protected Resources]
+    
+    style A fill:#e1f5fe
+    style L fill:#c8e6c9
+    style Q fill:#fff3e0
 ```
 
 ## 🔑 **Multiple Authentication Methods - Backend Flexibility at Its Finest**

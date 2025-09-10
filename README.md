@@ -1,4 +1,4 @@
-# 🔐 Auth-Bouncer: Enterprise Authentication Powerhouse
+# 🔐 Auth-Bouncer: Advanced Authentication Powerhouse
 
 > **Spring Boot 3.5.3 + React 19 | Production-Ready Authentication System**  
 > *Don't like the theme? Hit refresh and watch the magic happen! ✨*

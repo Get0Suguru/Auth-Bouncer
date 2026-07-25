@@ -4,15 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
-import org.springframework.web.filter.OncePerRequestFilter;
-
-import java.io.IOException;
-import java.time.Duration;import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -20,13 +13,17 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.time.Duration;
 
+
 @Component
+@Slf4j
 public class RateLimitingFilter extends OncePerRequestFilter {
 
     // making redis key value tamplet
     private final RedisTemplate<String, String> redisTemplate;
 
-    private static final int MAX_REQUESTS = 5;
+    @Value("${rate.limiting.max.requests:20}")
+    private static int MAX_REQUESTS;
+
     private static final Duration DURATION = Duration.ofMinutes(1);
 
     public RateLimitingFilter(RedisTemplate<String, String> redisTemplate) {
@@ -59,7 +56,9 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         // set expiry only on the first hit in this window, so the window is a true fixed window
         if(currCount != null && currCount == 1){
             redisTemplate.expire(key, DURATION);
+            log.info("Rate limit set for {} && valid till {}", key, System.currentTimeMillis() + DURATION.toMillis());
         }
+        log.info("Current count for {} is {}", key, currCount);
 
         if (currCount != null && currCount > MAX_REQUESTS) {
             response.setStatus(HttpServletResponse.SC_EXPECTATION_FAILED); // 429

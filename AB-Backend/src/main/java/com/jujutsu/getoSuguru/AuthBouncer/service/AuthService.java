@@ -2,6 +2,7 @@ package com.jujutsu.getoSuguru.AuthBouncer.service;
 
 import com.jujutsu.getoSuguru.AuthBouncer.Payload.LoginRequest;
 import com.jujutsu.getoSuguru.AuthBouncer.Payload.RegisterRequest;
+import com.jujutsu.getoSuguru.AuthBouncer.exceptions.AccountLockedException;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.InvalidLoginException;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.InvalidTokenException;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.RegistrationException;
@@ -25,12 +26,14 @@ public class AuthService {
     private AuthenticationManager authManager;
     private PasswordEncoder passwordEncoder;            // ab ye spring ke ioc ka part (after @Bean) so it will manage for me
     private JWTService jwtService;
+    private LoginAttemptService loginAttemptService;
 
-    public AuthService(UserRepository userRepository, AuthenticationManager authManager, PasswordEncoder passwordEncoder, JWTService jwtService) {
+    public AuthService(UserRepository userRepository, AuthenticationManager authManager, PasswordEncoder passwordEncoder, JWTService jwtService, LoginAttemptService loginAttemptService) {
         this.userRepository = userRepository;
         this.authManager = authManager;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.loginAttemptService = loginAttemptService;
     }
 
     public void registerUser(RegisterRequest registerRequest) throws RegistrationException {
@@ -63,26 +66,34 @@ public class AuthService {
 
     }
 
-    public String loginUser(LoginRequest loginRequest, HttpServletResponse httpResponse) throws InvalidLoginException {
+    public String loginUser(LoginRequest loginRequest, HttpServletResponse httpResponse) throws InvalidLoginException, AccountLockedException {
         User user = userRepository.findByEmail(loginRequest.getEmail());
         if(user == null){
             throw new InvalidLoginException("Entered email isn't linked with any user's account");
         }
+
+        // check the lock BEFORE we even try authenticating
+        if(loginAttemptService.isLocked(loginRequest.getEmail())){
+            throw new AccountLockedException("Too many failed attempts. Please try again in 15 minutes");
+        }
+
 
         try{
             authManager.authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getEmail(), loginRequest.getPassword()));
             String accessToken = jwtService.generateAccessToken(user);
             String refreshToken = jwtService.generateRefreshToken(user);
 
-            // sending refresh token as httpOnly cookie
             String cookieValue = String.format(
                     "jwtToken=%s; Path=/; HttpOnly; Secure; SameSite=None",
                     refreshToken
             );
             httpResponse.addHeader("Set-Cookie", cookieValue);
 
-            return accessToken;         // sending access token raw as response and expect frontend to handle and send in header
+            loginAttemptService.resetLoginAttempts(loginRequest.getEmail()); // success wipes the counter
+
+            return accessToken;
         }catch (Exception e){
+            loginAttemptService.recordLoginFailures(loginRequest.getEmail()); // failure increments it
             throw new InvalidLoginException( "Bad Credentials please recheck your credentials");
         }
     }

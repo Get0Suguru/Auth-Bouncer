@@ -4,6 +4,7 @@ import com.jujutsu.getoSuguru.AuthBouncer.Payload.ApiResponse;
 import com.jujutsu.getoSuguru.AuthBouncer.Payload.JWTResponse;
 import com.jujutsu.getoSuguru.AuthBouncer.Payload.LoginRequest;
 import com.jujutsu.getoSuguru.AuthBouncer.Payload.RegisterRequest;
+import com.jujutsu.getoSuguru.AuthBouncer.exceptions.AccountLockedException;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.InvalidLoginException;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.InvalidTokenException;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.RegistrationException;
@@ -50,6 +51,8 @@ public class AuthController {
            return new ResponseEntity<>(new JWTResponse(accessToken, accessTokenExpiration, jwtService.extractRole(accessToken)), HttpStatus.OK);
        } catch (InvalidLoginException e) {
            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(e.getMessage(), false));
+       }catch (AccountLockedException e) {
+           return ResponseEntity.status(HttpStatus.LOCKED).body(new ApiResponse(e.getMessage(), false)); // 423
        }
 
     }

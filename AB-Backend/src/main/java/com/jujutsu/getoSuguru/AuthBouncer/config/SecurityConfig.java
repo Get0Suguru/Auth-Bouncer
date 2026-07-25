@@ -27,9 +27,11 @@ public class SecurityConfig {
 
     private JWTFIlter jwtFilter;
     private CustomUserDetailService userDetailService;
+    private RateLimitingFilter rateLimitFilter;
 
-    public SecurityConfig(JWTFIlter jwtFilter, CustomUserDetailService userDetailService) {
+    public SecurityConfig(RateLimitingFilter rateLimitFilter, JWTFIlter jwtFilter, CustomUserDetailService userDetailService) {
         this.jwtFilter = jwtFilter;
+        this.rateLimitFilter = rateLimitFilter;
         this.userDetailService = userDetailService;
     }
 
@@ -47,6 +49,7 @@ public class SecurityConfig {
 
                 .csrf(csrf -> csrf.disable())           // otherwise csrf token will be needed
                 .cors(withDefaults())
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

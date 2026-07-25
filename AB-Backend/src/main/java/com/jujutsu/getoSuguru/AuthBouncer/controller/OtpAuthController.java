@@ -7,6 +7,7 @@ import com.jujutsu.getoSuguru.AuthBouncer.Payload.JWTResponse;
 import com.jujutsu.getoSuguru.AuthBouncer.Payload.OtpVerifyRequest;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.InvalidLoginException;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.InvalidOtpException;
+import com.jujutsu.getoSuguru.AuthBouncer.service.JWTService;
 import com.jujutsu.getoSuguru.AuthBouncer.service.OtpService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,8 +26,10 @@ public class OtpAuthController {
     private Long accessTokenExpiration;
 
     private OtpService otpService;
+    private JWTService jwtService;
 
-    public OtpAuthController(OtpService otpService) {
+    public OtpAuthController(JWTService jwtService, OtpService otpService) {
+        this.jwtService = jwtService;
         this.otpService = otpService;
     }
 
@@ -46,7 +49,7 @@ public class OtpAuthController {
 
         try {
             String token = otpService.verifyOtpAndSendToken(request, httpResponse);
-            return new ResponseEntity<>(new JWTResponse(token, accessTokenExpiration), HttpStatus.OK);
+            return new ResponseEntity<>(new JWTResponse(token, accessTokenExpiration, jwtService.extractRole(token)), HttpStatus.OK);
         }catch (InvalidOtpException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(e.getMessage(), false));
         }

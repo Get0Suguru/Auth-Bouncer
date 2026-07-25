@@ -11,4 +11,6 @@ public class JWTResponse {
     private String token;
     @NotNull(message = "Expires in is required")
     private Long expiresIn;
+
+    private String role;
 }

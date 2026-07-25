@@ -8,6 +8,7 @@ import com.jujutsu.getoSuguru.AuthBouncer.exceptions.InvalidLoginException;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.InvalidTokenException;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.RegistrationException;
 import com.jujutsu.getoSuguru.AuthBouncer.service.AuthService;
+import com.jujutsu.getoSuguru.AuthBouncer.service.JWTService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,6 +22,9 @@ public class AuthController {
 
     @Autowired
     private AuthService authService;
+
+    @Autowired
+    private JWTService jwtService;
 
     @Value("${jwt.access-token.expiration}")
     private Long accessTokenExpiration;
@@ -43,7 +47,7 @@ public class AuthController {
 
        try{
            String accessToken =authService.loginUser(loginRequest, httpResponse);
-           return new ResponseEntity<>(new JWTResponse(accessToken, accessTokenExpiration), HttpStatus.OK);
+           return new ResponseEntity<>(new JWTResponse(accessToken, accessTokenExpiration, jwtService.extractRole(accessToken)), HttpStatus.OK);
        } catch (InvalidLoginException e) {
            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(e.getMessage(), false));
        }
@@ -54,7 +58,7 @@ public class AuthController {
     public ResponseEntity<?> refresh(@CookieValue("jwtToken") String refreshToken, HttpServletResponse httpResponse) {
         try {
             String accessToken = authService.refreshOldToken(refreshToken, httpResponse);
-            return new ResponseEntity<>(new JWTResponse(accessToken, accessTokenExpiration), HttpStatus.OK);
+            return new ResponseEntity<>(new JWTResponse(accessToken, accessTokenExpiration, jwtService.extractRole(accessToken)), HttpStatus.OK);
         } catch (InvalidTokenException e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(new ApiResponse(e.getMessage(), false));
         }

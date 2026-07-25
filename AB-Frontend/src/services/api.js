@@ -7,6 +7,7 @@ export const authAPI = {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // needed so the browser stores the jwtToken refresh cookie
       body: JSON.stringify({
         email: credentials.email,
         password: credentials.password
@@ -87,6 +88,7 @@ export const authAPI = {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // needed so the browser stores the jwtToken refresh cookie
       body: JSON.stringify({ email, otp }),
     });
 
@@ -113,6 +115,7 @@ export const authAPI = {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // needed so the browser stores the jwtToken refresh cookie
     });
 
     const data = await response.json();
@@ -138,6 +141,7 @@ export const authAPI = {
       headers: {
         'Content-Type': 'application/json',
       },
+      credentials: 'include', // needed so the browser stores the jwtToken refresh cookie
     });
 
     const data = await response.json();

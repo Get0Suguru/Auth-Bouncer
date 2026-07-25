@@ -7,6 +7,7 @@ import com.jujutsu.getoSuguru.AuthBouncer.exceptions.GithHubAuthException;
 import com.jujutsu.getoSuguru.AuthBouncer.exceptions.GoogleOAuthException;
 import com.jujutsu.getoSuguru.AuthBouncer.service.GithubOAuthService;
 import com.jujutsu.getoSuguru.AuthBouncer.service.GoogleOAuthService;
+import com.jujutsu.getoSuguru.AuthBouncer.service.JWTService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -22,10 +23,12 @@ public class OAuthController {
 
     private GoogleOAuthService googleOAuthService;
     private GithubOAuthService githHubOAuthService;
+    private JWTService jwtService;
 
-    public OAuthController(GoogleOAuthService googleOAuthService, GithubOAuthService githubOAuthService) {
+    public OAuthController(JWTService jwtService, GoogleOAuthService googleOAuthService, GithubOAuthService githubOAuthService) {
         this.googleOAuthService = googleOAuthService;
         this.githHubOAuthService = githubOAuthService;
+        this.jwtService = jwtService;
     }
 
     // saar -> we gonna hit 2 api's (# 1st to get the access token from code ||  # 2nd to get the user info using that token)
@@ -35,7 +38,7 @@ public class OAuthController {
     public ResponseEntity<?> handleGoogleCallback(@RequestParam String code, HttpServletResponse httpResponse) {
         try {
             String accessToken = googleOAuthService.getAccessTokenUsingCode(code, httpResponse);
-            return new ResponseEntity<>(new JWTResponse(accessToken, accessTokenDurationMs), HttpStatus.CREATED);
+            return new ResponseEntity<>(new JWTResponse(accessToken, accessTokenDurationMs, jwtService.extractRole(accessToken)), HttpStatus.CREATED);
         }catch (GoogleOAuthException e){
             return new ResponseEntity<>(new ApiResponse(e.getMessage(), false), HttpStatus.BAD_REQUEST);
         }
@@ -46,7 +49,7 @@ public class OAuthController {
     public ResponseEntity<?> handleGithubCallback(@RequestParam String code, HttpServletResponse httpResponse) {
         try {
             String accessToken = githHubOAuthService.getAccessTokenUsingCode(code, httpResponse);
-            return new ResponseEntity<>(new JWTResponse(accessToken, accessTokenDurationMs), HttpStatus.CREATED);
+            return new ResponseEntity<>(new JWTResponse(accessToken, accessTokenDurationMs, jwtService.extractRole(accessToken)), HttpStatus.CREATED);
         } catch (GithHubAuthException e) {
             return new ResponseEntity<>(new ApiResponse(e.getMessage(), false), HttpStatus.BAD_REQUEST);
         }

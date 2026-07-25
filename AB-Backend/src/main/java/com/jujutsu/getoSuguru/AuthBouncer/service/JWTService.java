@@ -85,6 +85,12 @@ public class JWTService {
     }
 
 
+    public String extractRole(String jwtToken) {
+        return extractSingleClaim(jwtToken, claims -> claims.get("role", String.class));
+    }
+
+
+
 
 //  Public mehtods ---------------time to put claim extractor in action ---------------------------------------------------
 

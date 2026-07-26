@@ -6,6 +6,7 @@ import com.jujutsu.getoSuguru.AuthBouncer.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,11 +21,13 @@ public class ControllerForAdmin {
     private UserRepository userRepository;
 
     @GetMapping("/test")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse> isAdmin() {
         return new ResponseEntity<>(new ApiResponse("yes", true), HttpStatus.OK);
     }
 
     @GetMapping("/all-users")
+    @PreAuthorize("hasRole('ADMIN')")
     public List<User> getAllUsers() {
         return userRepository.findAll();
         }

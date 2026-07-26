@@ -3,6 +3,7 @@ package com.jujutsu.getoSuguru.AuthBouncer.controller;
 import com.jujutsu.getoSuguru.AuthBouncer.Payload.ApiResponse;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ControllerForUser {
 
     @GetMapping("/test")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<ApiResponse> isUser() {
         return new ResponseEntity<>(new ApiResponse("yes", true), HttpStatus.OK);
     }

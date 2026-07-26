@@ -9,6 +9,7 @@ import com.jujutsu.getoSuguru.AuthBouncer.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,6 +23,7 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/send-otp")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<ApiResponse> changePassword() throws InvalidLoginException {
         try{
             userService.findUserAndSendOtp();
@@ -31,6 +33,7 @@ public class UserController {
         }
     }
 
+    @PreAuthorize("hasRole('USER')")
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse> verifyOtp(@RequestBody ChangePasswordRequest request) throws InvalidOtpException {
         try{
@@ -41,7 +44,13 @@ public class UserController {
         }
     }
 
+    // just a fun method -> user can become admin (with a frontend level easter egg u have to see)
+
+    // Intentional easter egg — any user can self-promote to explore admin features in this demo.
+    // Would never ship like this in production; a real RBAC system requires an existing admin
+    // to grant roles (see @PreAuthorize usage elsewhere in this codebase).
     @PostMapping("/make-admin")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<ApiResponse> makeAdmin() {
         try {
             userService.makeAdmin();

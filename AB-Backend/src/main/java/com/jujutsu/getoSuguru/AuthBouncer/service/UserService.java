@@ -68,6 +68,9 @@ public class UserService {
         }
     }
 
+    // Intentional easter egg — any user can self-promote to explore admin features in this demo.
+    // Would never ship like this in production; a real RBAC system requires an existing admin
+    // to grant roles (see @PreAuthorize usage elsewhere in this codebase).
     public void makeAdmin() throws InvalidRequestException {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         Object principal = authentication.getPrincipal();

@@ -103,7 +103,7 @@ public class AuthService {
     public String refreshOldToken(String refreshToken, HttpServletResponse httpResponse) throws InvalidTokenException {
         try {
             //  i feel here should be just redis check the 2nd one -> the first one checks the claims(variable in token) + signature + db check
-            if (jwtService.isTokenValid(refreshToken) && refreshTokenService.isActive(refreshToken)) {
+            if (jwtService.isTokenValid(refreshToken) && refreshTokenService.isActive(jwtService.extractEmail(refreshToken), refreshToken)) {
                 String accessToken = jwtService.generateAccessToken(userRepository.findByEmail(jwtService.extractEmail(refreshToken)));
                 String newRefreshToken = jwtService.generateRefreshToken(userRepository.findByEmail(jwtService.extractEmail(refreshToken)));
 

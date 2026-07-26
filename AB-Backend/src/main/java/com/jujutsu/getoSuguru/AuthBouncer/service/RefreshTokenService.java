@@ -12,14 +12,14 @@ import java.time.Duration;
 public class RefreshTokenService {
 
     private final RedisTemplate<String, String> redisTemplate;
-    private JWTService jwtService;
+
 
     @Value("${jwt.refresh-token.expiration}")
     private Long refreshTokenDurationMs;
 
-    public RefreshTokenService(RedisTemplate<String, String> redisTemplate, JWTService jwtService) {
+    public RefreshTokenService(RedisTemplate<String, String> redisTemplate) {
         this.redisTemplate = redisTemplate;
-        this.jwtService = jwtService;
+
     }
 
     private String key(String email) {
@@ -32,8 +32,7 @@ public class RefreshTokenService {
     }
 
     // this is the real revocation check — not just "is the JWT signature valid"
-    public boolean isActive(String refreshToken) {
-        String email = jwtService.extractEmail(refreshToken);
+    public boolean isActive(String email, String refreshToken) {
         String stored = redisTemplate.opsForValue().get(key(email));
         return stored != null && stored.equals(refreshToken);
         // its a simple check weather the token is still in redis (means active or not)

@@ -19,8 +19,13 @@ import java.util.function.Function;
 @Service
 public class JWTService {
 
-    @Autowired
     private UserRepository userRepo;
+    private final RefreshTokenService refreshTokenService;
+
+    public JWTService(UserRepository userRepo, RefreshTokenService refreshTokenService) {
+        this.userRepo = userRepo;
+        this.refreshTokenService = refreshTokenService;
+    }
 
     @Value("${jwt.secret}")                             // getting value from the application.properties (config file)
     private String jwtSecret;
@@ -31,15 +36,21 @@ public class JWTService {
     @Value("${jwt.access-token.expiration}")
     private Long accessTokenDurationMs;
 
-//#Public methods----------------------Jwts class will help with all (parsing, validation, building etc)----------------------------------
+    //#Public methods----------------------Jwts class will help with all (parsing, validation, building etc)----------------------------------
+    public String generateAccessToken(User user){
+        return buildToken(user, accessTokenDurationMs);
+    }
 
-    public String generateAccessToken(User user){ return buildToken(user, accessTokenDurationMs); }
     public String generateRefreshToken(User user){
-        return buildToken(user, refreshTokenDurationMs);
+        String token = buildToken(user, refreshTokenDurationMs);
+        refreshTokenService.storeToken(user.getEmail(), token);   // now EVERY caller gets this for free (no need to make change in 4 classes)
+        return token;
     }
 
     // token validation ask for 1. username from token to exist in db + 2. token is not expired
-    public boolean isTokenValid(String token){ return (userRepo.existsByEmail(extractEmail(token)) && !isTokenExpired(token));}
+    public boolean isTokenValid(String token){
+        return (userRepo.existsByEmail(extractEmail(token)) && !isTokenExpired(token));
+    }
 
 
 // ------------------------------------------------------------------------------------------------------------------------
@@ -65,6 +76,7 @@ public class JWTService {
     }
 
 //#----- To Extract Claims (payload) from token -----------||  two things -> extract all claim -> generic fxn for specific claim
+
 
     private Claims extractAllClaims(String token){
 

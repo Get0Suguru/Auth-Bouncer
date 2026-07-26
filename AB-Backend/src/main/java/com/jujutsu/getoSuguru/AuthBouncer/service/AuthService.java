@@ -27,13 +27,15 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;            // ab ye spring ke ioc ka part (after @Bean) so it will manage for me
     private JWTService jwtService;
     private LoginAttemptService loginAttemptService;
+    private RefreshTokenService refreshTokenService;
 
-    public AuthService(UserRepository userRepository, AuthenticationManager authManager, PasswordEncoder passwordEncoder, JWTService jwtService, LoginAttemptService loginAttemptService) {
+    public AuthService(RefreshTokenService refreshTokenService, UserRepository userRepository, AuthenticationManager authManager, PasswordEncoder passwordEncoder, JWTService jwtService, LoginAttemptService loginAttemptService) {
         this.userRepository = userRepository;
         this.authManager = authManager;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.loginAttemptService = loginAttemptService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     public void registerUser(RegisterRequest registerRequest) throws RegistrationException {
@@ -100,7 +102,8 @@ public class AuthService {
 
     public String refreshOldToken(String refreshToken, HttpServletResponse httpResponse) throws InvalidTokenException {
         try {
-            if (jwtService.isTokenValid(refreshToken)) {
+            //  i feel here should be just redis check the 2nd one -> the first one checks the claims(variable in token) + signature + db check
+            if (jwtService.isTokenValid(refreshToken) && refreshTokenService.isActive(refreshToken)) {
                 String accessToken = jwtService.generateAccessToken(userRepository.findByEmail(jwtService.extractEmail(refreshToken)));
                 String newRefreshToken = jwtService.generateRefreshToken(userRepository.findByEmail(jwtService.extractEmail(refreshToken)));
 
@@ -115,12 +118,15 @@ public class AuthService {
         catch (Exception e) {
             throw new InvalidTokenException("Token is not valid or expired");
         }
-        return "failed";
+        return "failed to convert refresh token (must be invalid or expired)";
     }
 
     public void logout(String refreshToken, HttpServletResponse httpResponse) {
 
         if(jwtService.isTokenValid(refreshToken)) {
+            String email = jwtService.extractEmail(refreshToken);
+            refreshTokenService.invalidate(email);
+
             Cookie cookie = new Cookie("jwtToken", null);
             cookie.setMaxAge(0);
             cookie.setPath("/");

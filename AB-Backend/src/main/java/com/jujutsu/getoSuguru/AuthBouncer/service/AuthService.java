@@ -64,8 +64,6 @@ public class AuthService {
 
         userRepository.save(user);
 
-
-
     }
 
     public String loginUser(LoginRequest loginRequest, HttpServletResponse httpResponse) throws InvalidLoginException, AccountLockedException {

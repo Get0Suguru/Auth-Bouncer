@@ -5,6 +5,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 
+// this service will handle the login attempts -> the brute force protection for a target account
+// when someone try to target one account with bruteforce + switch ips so it won't be locked by rate limiting (this will protect the account)
+
 @Service
 public class LoginAttemptService {
 
@@ -36,7 +39,7 @@ public class LoginAttemptService {
         redisTemplate.delete(key);
     }
 
-    // check if the user is locked
+    // check if the user is locked (>=5 attempts & still within the duration  ==   locked)
     public boolean isLocked(String email){
         String value = redisTemplate.opsForValue().get(makeKey(email));
         if(value == null) return false;

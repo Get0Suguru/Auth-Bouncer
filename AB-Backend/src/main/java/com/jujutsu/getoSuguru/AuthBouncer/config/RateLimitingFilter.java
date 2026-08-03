@@ -22,7 +22,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private final RedisTemplate<String, String> redisTemplate;
 
     @Value("${rate.limiting.max.requests:20}")
-    private static int MAX_REQUESTS;
+    private int MAX_REQUESTS;
 
     private static final Duration DURATION = Duration.ofMinutes(1);
 

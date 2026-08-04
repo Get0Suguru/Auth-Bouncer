@@ -108,7 +108,7 @@ graph TB
 **Backend Security Implementation:**
 - **Spring Security** role-based endpoint protection
 - **JWT Claims** with role information
-- **Method-level security** annotations
+- **`@PreAuthorize`** method-level annotations on controller endpoints (`ControllerForAdmin`, `ControllerForUser`, `UserController`) — checked at the method level via Spring Security's expression handler, on top of URL-pattern matching
 - **Hierarchical permission** system
 
 **Protected Endpoints:**
@@ -128,6 +128,25 @@ graph TB
 - **BCrypt re-hashing** with salt rotation
 - **Session invalidation** after password change
 - **Audit logging** for security events
+
+### 🚦 **Rate Limiting**
+Real Redis-backed rate limiting, not a marketing bullet — `RateLimitingFilter` runs as a servlet filter in front of `/api/auth/login`, `/api/auth/request-otp`, and `/api/auth/verify-otp`.
+- **`INCR` + `EXPIRE`** fixed-window counter per `client IP + path`, keyed as `rate_limiting:{ip}path:{path}`
+- Configurable ceiling via `rate.limiting.max.requests` (default 20 requests/minute)
+- Expiry is set only on the first hit in the window, so the window is a true fixed window
+- Over the limit → short-circuits the chain and returns 429 before the request reaches the controller
+
+### 🔒 **Brute-Force Lockout**
+`LoginAttemptService` tracks failures **per email** in Redis, independent of the IP-based rate limiter (so an attacker rotating IPs still can't brute-force one account):
+- Failed login → `INCR` on `login_attempts:{email}`, with a 15-minute `EXPIRE` set on the first failure
+- 5 failed attempts within that window → account locked (`AuthController` returns `423 Locked`)
+- Successful login → counter is deleted, resetting the window
+
+### ♻️ **Redis-Backed Refresh Tokens (Real Revocation)**
+Refresh tokens aren't just JWTs trusted on signature — `RefreshTokenService` stores the current token per user in Redis (`refresh-token:{email}`), so logout actually kills the session server-side instead of relying on client-side cookie deletion:
+- **Login/refresh** → token written to Redis with a TTL matching the refresh token's expiry (rotation overwrites the old entry)
+- **Every refresh request** → checked against what's stored in Redis, not just JWT signature validity — a token that's valid-but-revoked is rejected
+- **Logout** → deletes the Redis entry, immediately invalidating that session
 
 ---
 
@@ -150,9 +169,10 @@ graph TB
 
 #### 🛡️ **AuthService - The Authentication Brain**
 - User registration with duplicate validation
-- Secure login with BCrypt verification  
+- Secure login with BCrypt verification, gated by `LoginAttemptService` lockout checks
 - JWT token generation and refresh rotation
 - HttpOnly cookie management for security
+- Delegates to `RefreshTokenService` for Redis-backed session revocation on logout
 
 #### 🎫 **JWTService - Token Management Master**
 - Access token generation (15-minute expiry)
@@ -183,10 +203,10 @@ graph TB
 - **Automatic timestamps** with JPA auditing
 
 ### ⚡ **Redis Caching Layer**
-- **Session management** for scalability
+- **Refresh token store** — `refresh-token:{email}` → enables real server-side revocation on logout, not just cookie deletion
 - **OTP storage** with TTL expiration
-- **Rate limiting** data structures
-- **Performance optimization** for frequent queries
+- **Rate limiting counters** — fixed-window `INCR`/`EXPIRE` on auth endpoints
+- **Brute-force lockout counters** — per-email failed-login tracking, independent of IP-based rate limiting
 
 ---
 
@@ -228,11 +248,18 @@ graph TB
 | `POST` | `/api/auth/request-otp` | OTP Generation | Public |
 | `POST` | `/api/auth/verify-otp` | OTP Verification | Public |
 
+### 👤 **Account Management Endpoints**
+| Method | Endpoint | Purpose | Security |
+|--------|----------|---------|----------|
+| `POST` | `/api/modify-user/send-otp` | OTP for account changes | Authenticated |
+| `POST` | `/api/modify-user/verify-otp` | Confirm account change | Authenticated |
+| `POST` | `/api/modify-user/make-admin` | Promote user to ADMIN | Admin |
+
 ### 🔒 **Protected Resources**
 | Endpoint Pattern | Required Role | Description |
 |------------------|---------------|-------------|
 | `/api/is-user/**` | USER | User-level resources |
-| `/api/is-admin/**` | ADMIN | Admin-only resources |
+| `/api/is-admin/**` | ADMIN | Admin-only resources (incl. `/all-users`) |
 | `/api/health/**` | Public | Health checks |
 
 ---
@@ -281,10 +308,29 @@ npm run dev
 ## 🧪 **Development & Testing**
 
 ### 🔍 **Backend Testing Strategy**
-- **Unit Tests** for service layer
-- **Integration Tests** for controllers
-- **Security Tests** for authentication flows
-- **Performance Tests** for load handling
+
+33 tests across three layers, built directly against the real service/controller/repository code (no throwaway examples):
+
+**Unit tests (JUnit 5 + Mockito)**
+- `OtpServiceTest` — OTP generation, Redis-backed expiry, resend cooldown logic
+- `RefreshTokenServiceTest` — refresh token issuance, rotation, and invalidation
+- `JWTServiceTest` — real HMAC-SHA256 signing/parsing, exercised against actual crypto rather than mocked out
+- `AuthServiceTest` — registration/login orchestration across multiple collaborating mocks
+- `LoginAttemptServiceTest` — Redis-backed lockout counters and key-prefix handling
+
+**HTTP layer (`@WebMvcTest` + MockMvc)**
+- `AuthControllerTest` — bad password (400), duplicate email on register (400), invalid/expired refresh token (400), and account lockout after repeated failures (423)
+
+**Persistence layer (`@DataJpaTest` + H2)**
+- `UserRepositoryTest` — repository queries against an in-memory H2 instance
+
+| Layer | Tool | Class(es) |
+|-------|------|-----------|
+| Service (unit) | JUnit 5 + Mockito | `OtpService`, `RefreshTokenService`, `JWTService`, `AuthService`, `LoginAttemptService` |
+| Controller (HTTP) | `@WebMvcTest` + MockMvc | `AuthController` |
+| Repository (data) | `@DataJpaTest` + H2 | `UserRepository` |
+
+Mockito patterns exercised along the way: `RedisTemplate`/`opsForValue()` stubbing chains, `@Mock` vs `@InjectMocks` boundaries, `ReflectionTestUtils` for `@Value`-injected fields, and argument matchers (`any()`, `eq()`, `argThat()`, `ArgumentCaptor`).
 
 ### 🛠️ **Development Tools**
 - **Spring Boot DevTools** for hot reload
@@ -299,7 +345,8 @@ npm run dev
 ### 🔒 **Security Hardening**
 - Environment-specific JWT secrets
 - HTTPS enforcement
-- Rate limiting implementation
+- Redis-backed rate limiting (fixed-window `INCR`/`EXPIRE`) on `/api/auth/login`, `/api/auth/request-otp`, `/api/auth/verify-otp`
+- Per-email brute-force lockout (5 failures / 15-minute window) independent of IP-based rate limiting
 - SQL injection prevention
 - XSS protection headers
 

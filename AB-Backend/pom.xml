@@ -68,6 +68,13 @@
 			<artifactId>spring-boot-starter-oauth2-client</artifactId>
 		</dependency>
 
+<!--		For H2  (testing only)-->
+		<dependency>
+			<groupId>com.h2database</groupId>
+			<artifactId>h2</artifactId>
+			<scope>test</scope>
+		</dependency>
+
 <!--		Spring Securit-->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

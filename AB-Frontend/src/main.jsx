@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
+import ServerWakeUp from './components/layout/ServerWakeUp.jsx'
 
 // List of secondary colors to choose from
 const secondaryColors = [
@@ -24,6 +25,8 @@ document.documentElement.style.setProperty('--dynamic-secondary-color', randomSe
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <App />
+    <ServerWakeUp>
+      <App />
+    </ServerWakeUp>
   </StrictMode>,
 )

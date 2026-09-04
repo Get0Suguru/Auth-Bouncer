@@ -41,11 +41,11 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationProvider authProvider) throws Exception {
         http.
                 sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth->auth
+                .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/is-admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/is-user/**", "/api/modify-user/**").hasRole("USER")
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/health/**").hasRole("ADMIN")
+                        .requestMatchers("/api/health/**").permitAll()
                         .anyRequest().authenticated()
                 )
 
@@ -58,7 +58,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authManager(AuthenticationConfiguration config)throws Exception{
+    public AuthenticationManager authManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
 
@@ -69,7 +69,7 @@ public class SecurityConfig {
 
 
     @Bean
-    public AuthenticationProvider authProvider(UserDetailsService userDetailsService){
+    public AuthenticationProvider authProvider(UserDetailsService userDetailsService) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
         provider.setPasswordEncoder(passwordEncoder());
         provider.setUserDetailsService(userDetailsService);
@@ -77,7 +77,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public RestTemplate restTemplate(){
+    public RestTemplate restTemplate() {
         return new RestTemplate();
     }
 

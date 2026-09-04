@@ -4,7 +4,7 @@ import { FaGithub } from 'react-icons/fa';
 export default function OAuthButtons() {
   const handleGoogleLogin = () => {
     const clientId = '359726402004-j9fe2bkk6vqd2vuuagk4d6qbkm1ku8a1.apps.googleusercontent.com';
-    const redirectUri = encodeURIComponent('http://localhost:5173/');
+    const redirectUri = encodeURIComponent(import.meta.env.VITE_OAUTH_REDIRECT_URI || 'http://localhost:5173/');
     const scope = encodeURIComponent('email profile');
     
     const googleOAuthUrl = `https://accounts.google.com/o/oauth2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}&access_type=offline&prompt=consent`;
@@ -15,7 +15,7 @@ export default function OAuthButtons() {
   const handleGitHubLogin = () => {
     // You'll need to replace these with your actual GitHub OAuth app credentials
     const clientId = 'Ov23li9GwFmcr0kqkdvG'; // Replace with your GitHub Client ID
-    const redirectUri = encodeURIComponent('http://localhost:5173/');
+    const redirectUri = encodeURIComponent(import.meta.env.VITE_OAUTH_REDIRECT_URI || 'http://localhost:5173/');
     const scope = encodeURIComponent('user:email');
     const state = Math.random().toString(36).substring(7); // Random state for security
     

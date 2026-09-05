@@ -46,7 +46,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
             return;
         }
 
-        String clientIp = request.getRemoteAddr();
+        String clientIp = resolveClientIp(request);
 
         String key = "rate_limiting:"+clientIp+"path:"+path;
 
@@ -61,7 +61,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         log.info("Current count for {} is {}", key, currCount);
 
         if (currCount != null && currCount > MAX_REQUESTS) {
-            response.setStatus(HttpServletResponse.SC_EXPECTATION_FAILED); // 429
+            response.setStatus(429); // Too Many Requests
             response.setContentType("application/json");
             response.getWriter().write("{\"message\":\"Too many requests, please try again later\",\"success\":false}");
             return; // stop the chain here — request never reaches the controller
@@ -70,5 +70,15 @@ public class RateLimitingFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
 
     }
-}
 
+    // Render (and most PaaS) sit behind a reverse proxy, so getRemoteAddr()
+    // always returns the proxy's internal IP, not the real client IP.
+    // X-Forwarded-For holds the original client IP as the first entry.
+    private String resolveClientIp(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        return request.getRemoteAddr();
+    }
+}
